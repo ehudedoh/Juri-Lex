@@ -11,6 +11,15 @@ class ExtractionResponse(BaseModel):
     request_id: str
 
 
+class TranslationRequest(BaseModel):
+    text: str
+
+
+class TranslationResponse(BaseModel):
+    translation: str
+    request_id: str
+
+
 class ExplanationRequest(BaseModel):
     text: str
     consent: bool = False

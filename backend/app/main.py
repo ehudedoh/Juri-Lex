@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routers import documents, explanations
+from .routers import documents, explanations, translations
 
 app = FastAPI(
     title="JuriLex",
@@ -23,6 +23,7 @@ app.add_middleware(
 
 app.include_router(documents.router)
 app.include_router(explanations.router)
+app.include_router(translations.router)
 
 
 @app.get("/api/health")

@@ -1,11 +1,11 @@
 # JuriLex — Avancement du développement
 
 ## État général
-- Phase actuelle : Phase 4 — Explication IA (validée) · prochaine : Phase 5 — Traduction
+- Phase actuelle : Phase 5 — Traduction (validée) · prochaine : Phase 6 — Synthèse vocale
 - Dernière mise à jour : 2026-10-31
 - État global : EN COURS
 - Blocage principal : licences non commerciales (CC-BY-NC(-SA)) à trancher pour
-  toute exploitation commerciale ; modèles de traduction/TTS non encore exécutés.
+  toute exploitation commerciale ; modèle TTS non encore exécuté.
 
 ## Phase 0 — Faisabilité
 - [x] Vérification des licences (traduction CC-BY-NC-SA-4.0, TTS CC-BY-NC-4.0, base CC-BY-NC-4.0)
@@ -56,13 +56,13 @@
 - [x] Test réel Gemini (explication réelle vérifiée, sources document/ia/incertain)
 
 ## Phase 5 — Traduction
-- [ ] Licence vérifiée
-- [ ] Modèle de base identifié
-- [ ] Adaptateur LoRA vérifié
-- [ ] Chargement réel du modèle
-- [ ] Traduction réelle français-éwé
-- [ ] Tests linguistiques
-- [ ] Mesures de mémoire et de latence
+- [x] Licence vérifiée (CC-BY-NC-SA-4.0, non commerciale)
+- [x] Modèle de base identifié (facebook/nllb-200-distilled-600M)
+- [x] Adaptateur LoRA vérifié (cheriftenga/nllb-200-distilled-600M-ewe-lora-v2)
+- [x] Chargement réel du modèle (base + LoRA, ~2,4 Go RAM)
+- [x] Traduction réelle français-éwé (vérifiée : obligations, montants, dates, négation)
+- [x] Tests linguistiques (nombres et négations conservés)
+- [x] Mesures de mémoire et de latence (pic ~2,5 Go ; 9–46 s/phrase ; chargement ~6 min)
 
 ## Phase 6 — Synthèse vocale
 - [ ] Licence vérifiée
@@ -94,59 +94,56 @@
 ## Dernière session de travail
 
 ### Travail effectué
-- Intégration de Gemini côté backend (Phase 4) :
-  - SDK `google-genai` (nouvelle API « Interactions »), clé lue depuis `.env`.
-  - Mise à jour du modèle : `gemini-1.5-flash` (obsolète, 404) → `gemini-3.5-flash`.
-  - Endpoint `POST /api/explanations` : vérification du consentement **côté
-    backend** (403 sans consentement), validation du texte, appel réel à Gemini.
-  - Réponse structurée (nature, résumé, obligations, montants, dates, conditions,
-    conséquences, ambiguïtés, questions) avec source `document`/`ia`/`incertain`.
-  - Protection contre les injections de prompt (instructions système).
-  - Gestion des erreurs : 503 sans clé/indisponible, 400 vide/trop long.
-- Câblage du frontend : l'analyse appelle désormais le backend réel.
+- Intégration de la traduction locale français → éwé (Phase 5) :
+  - Module `translation.py` : chargement **une seule fois** (singleton) du modèle
+    de base NLLB-600M + adaptateur LoRA éwé, avec verrou d'inférence.
+  - Endpoint `POST /api/translations`.
+  - Câblage du frontend (le bouton « Traduire en éwé » appelle le backend réel).
+- Mesures réelles : mémoire ~2,4 Go (pic ~2,5 Go), latence 9–46 s/phrase,
+  chargement initial ~6 min (une seule fois par processus).
 
 ### Fichiers modifiés
-- `backend/app/ai.py` — client Gemini + prompt système + normalisation (créé).
-- `backend/app/routers/explanations.py` — endpoint d'explication (créé).
-- `backend/app/schemas.py` — modèles `ExplanationRequest/Item/Response`.
-- `backend/app/config.py`, `.env`, `.env.example` — modèle par défaut mis à jour.
-- `backend/requirements.txt` — ajout `google-genai`.
-- `backend/tests/test_explanations.py` — tests consentement/erreurs/mock (créé).
-- `frontend/src/api.js`, `frontend/src/App.jsx` — analyse câblée au backend.
+- `backend/app/translation.py` — traduction NLLB-éwé (créé).
+- `backend/app/routers/translations.py` — endpoint de traduction (créé).
+- `backend/app/schemas.py` — modèles `TranslationRequest/Response`.
+- `backend/app/main.py` — inclusion du routeur translations.
+- `backend/tests/test_translations.py` — tests (créé, avec mocks).
+- `frontend/src/api.js`, `frontend/src/App.jsx` — traduction câblée au backend.
 - `AVANCEMENT.md` — suivi mis à jour.
 
 ### Tests exécutés
-- `python -m pytest -q` → **17 passed**.
-- **Test réel Gemini** : `ai.explain()` sur un contrat d'exemple → explication
-  structurée correcte (obligations, montants, conséquences, ambiguïtés, questions,
-  sources bien distinguées).
-- **Test HTTP réel** : `POST /api/explanations` → **403** sans consentement,
-  **200** avec consentement (explication réelle de Gemini).
+- `python -m pytest -q` → **20 passed** (tests traductions avec mocks).
+- `npm run build` → **succès** (41 modules).
+- **Test réel de traduction** (script) : 4 phrases traduites réellement en éwé —
+  obligation, montant (« cent mille » → « akpe alafa ɖeka »), durée (« douze » →
+  « wuieve »), interdiction (« interdit » → négation « … o »). Nombres et
+  négations conservés.
 
 ### Fonctionnalités réellement validées
-- Explication produite par Gemini (réelle, clé valide, modèle `gemini-3.5-flash`).
-- Vérification du consentement côté backend (réelle, 403).
-- Refus sans clé API (503) et texte vide (400).
-- Distinction des sources document/ia/incertain (réelle).
+- Chargement réel du modèle NLLB-éwé (base + LoRA).
+- Traduction réelle français → éwé (vérifiée sur plusieurs types de phrases).
+- Conservation des nombres et des négations (vérifiée réellement).
 
 ### Problèmes rencontrés
-- `gemini-1.5-flash` et `gemini-2.5-*` ne sont plus disponibles (404) ; les
-  modèles 3.x exigent la nouvelle API « Interactions ». Résolu en passant à
-  `google-genai` (interactions) avec `gemini-3.5-flash`.
+- Le tokenizer de l'adaptateur LoRA a un `tokenizer_config.json` incompatible
+  avec transformers 4.57 (`AttributeError`). Résolu en utilisant le tokenizer
+  standard du modèle de base NLLB.
+- Latence CPU élevée (9–46 s/phrase) : acceptable pour le MVP, à optimiser
+  ultérieurement (quantification, segmentation).
 
 ### Limites restantes
-- Traduction (NLLB) et audio (MMS TTS) encore simulés.
-- Modèles de traduction/TTS non téléchargés (~2,3 Go + ~150 Mo).
+- Traduction limitée au résumé de l'explication (pas au document complet).
+- Audio (MMS TTS) encore simulé.
 - Licences non commerciales : exploitation commerciale bloquée sans autorisation.
 
 ### Prochaine étape
-Phase 5 — Traduction locale : installer/charger le modèle NLLB-éwé (base +
-adaptateur LoRA), implémenter l'endpoint de traduction français→éwé, tester
-réellement et mesurer mémoire/latence. Cette phase nécessite le téléchargement
-des poids (~2,3 Go) — voir accord explicite requis.
+Phase 6 — Synthèse vocale locale : charger MMS TTS éwé (déjà en cache, ~145 Mo),
+implémenter l'endpoint de génération audio, produire un vrai fichier WAV, le
+servir au frontend et le lire dans le navigateur. Attention : coexistence mémoire
+NLLB (~2,4 Go) + TTS (~0,5 Go) à valider.
 
 ### Instructions pour reprendre
 - Backend : `cd backend && source .venv/bin/activate && uvicorn app.main:app --reload`
 - Frontend : `cd frontend && npm run dev`
 - Tests : `cd backend && .venv/bin/python -m pytest`
-- Ne pas télécharger les modèles de traduction/TTS (~2,3 Go + ~150 Mo) sans accord explicite (Règle 4).
+- Les modèles NLLB et MMS TTS sont déjà en cache local (~/.cache/huggingface).

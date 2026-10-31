@@ -33,3 +33,12 @@ export function explainDocument(text, consent) {
     body: JSON.stringify({ text, consent }),
   })
 }
+
+// Traduit un texte français en éwé.
+export function translateToEwe(text) {
+  return request('/translations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { simulateTranslation, simulateSpeech } from './mock.js'
-import { extractDocument, explainDocument } from './api.js'
+import { simulateSpeech } from './mock.js'
+import { extractDocument, explainDocument, translateToEwe } from './api.js'
 import StepIndicator from './components/StepIndicator.jsx'
 import Home from './screens/Home.jsx'
 import Import from './screens/Import.jsx'
@@ -116,10 +116,10 @@ export default function App() {
   const translate = async () => {
     patch({ busy: true, error: null })
     try {
-      const translation = await simulateTranslation()
-      setState((s) => ({ ...s, busy: false, translation }))
-    } catch {
-      patch({ busy: false, error: 'La traduction est momentanément indisponible.' })
+      const result = await translateToEwe(state.explanation?.summary || '')
+      setState((s) => ({ ...s, busy: false, translation: result.translation }))
+    } catch (e) {
+      patch({ busy: false, error: e.message || 'La traduction est momentanément indisponible.' })
     }
   }
 
