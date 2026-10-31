@@ -1,7 +1,7 @@
 # JuriLex — Avancement du développement
 
 ## État général
-- Phase actuelle : Phase 1 — Structure (validée) · prochaine : Phase 2 — Interface
+- Phase actuelle : Phase 2 — Interface (validée) · prochaine : Phase 3 — Documents
 - Dernière mise à jour : 2026-10-31
 - État global : EN COURS
 - Blocage principal : licences non commerciales (CC-BY-NC(-SA)) à trancher pour
@@ -25,16 +25,20 @@
 - [x] Tests de base exécutés (`pytest` : 1 test passé)
 
 ## Phase 2 — Interface
-- [ ] Accueil
-- [ ] Importation
-- [ ] Prévisualisation
-- [ ] Correction du texte
-- [ ] Consentement
-- [ ] Résultats
-- [ ] Traduction éwé
-- [ ] Lecteur audio
-- [ ] États de chargement et d'erreur
-- [ ] Responsive et accessibilité
+- [x] Accueil
+- [x] Importation
+- [x] Prévisualisation
+- [x] Correction du texte
+- [x] Consentement
+- [x] Résultats
+- [x] Traduction éwé
+- [x] Lecteur audio
+- [x] États de chargement et d'erreur
+- [x] Responsive et accessibilité
+
+> Note : l'interface est fonctionnelle avec des **données simulées** (mock.js).
+> Les appels réels au backend (extraction, Gemini, NLLB, MMS TTS) seront câblés
+> aux Phases 3 à 6.
 
 ## Phase 3 — Documents
 - [ ] Extraction PDF
@@ -90,62 +94,52 @@
 ## Dernière session de travail
 
 ### Travail effectué
-- Initialisation de la structure du projet : `backend/` (FastAPI), `frontend/`
-  (Vite + React, JavaScript sans TypeScript), `README.md`, `.gitignore`,
-  `.env.example`.
-- Mise en place de la configuration par variables d'environnement
-  (`backend/app/config.py`, lecture via `python-dotenv`).
-- Installation des dépendances backend : core (fastapi, uvicorn, pydantic,
-  python-multipart, python-dotenv), dev (pytest, httpx) et ML (torch 2.15 CPU,
-  transformers 4.57, accelerate, peft).
-- Validation de compatibilité Python 3.14 : import réussi de
-  `AutoModelForSeq2SeqLM`, `VitsModel`, `AutoModelForTextToWaveform`, `PeftModel`.
-- Vérification du lancement local : `GET /api/health` → 200 ; build frontend OK.
+- Réalisation de l'interface mobile-first du parcours complet (Phase 2) :
+  9 écrans (accueil, importation, prévisualisation, correction du texte,
+  consentement, analyse en cours, résultats, éwé & audio, fin de session).
+- Direction artistique conforme au cahier des charges : vert profond, fond
+  ivoire, texte anthracite, ocre doux, rouge réservé aux erreurs ; typographie
+  sans sérif, cartes sobres, sans dégradés ni illustrations génériques.
+- États de chargement (spinners, sans faux pourcentage) et d'erreur (alertes +
+  bouton réessayer) implémentés.
+- Accessibilité : HTML sémantique, `focus-visible`, `prefers-reduced-motion`,
+  labels ARIA, navigation clavier (boutons natifs).
+- Données simulées (`src/mock.js`) pour tester le parcours, sans appel backend.
 
 ### Fichiers modifiés
-- `README.md` — présentation, installation, lancement (créé).
-- `.gitignore`, `.env.example` — règles Git et variables d'environnement (créés).
-- `backend/app/main.py` — app FastAPI + endpoint `/api/health` + CORS (créé).
-- `backend/app/config.py` — `Settings` lu depuis l'environnement (créé).
-- `backend/requirements*.txt`, `backend/pyproject.toml` — dépendances + config pytest (créés).
-- `backend/tests/test_health.py` — test de l'endpoint de santé (créé).
-- `frontend/*` — squelette Vite + React (package.json, vite.config.js, index.html, src) (créés).
+- `frontend/src/App.jsx` — machine à états du parcours + orchestration simulée.
+- `frontend/src/steps.js` — définition des 9 étapes.
+- `frontend/src/mock.js` — données et fonctions simulées (aucune donnée réelle).
+- `frontend/src/index.css` — design system complet (couleurs, boutons, cartes…).
+- `frontend/src/components/Button.jsx`, `StepIndicator.jsx` — composants réutilisables.
+- `frontend/src/screens/*.jsx` — 9 écrans du parcours.
 - `AVANCEMENT.md` — suivi mis à jour.
 
 ### Tests exécutés
-- `backend/.venv/bin/python -m pytest -q` → **1 passed** (endpoint `/api/health`).
-- `npm run build` (frontend) → **succès** (27 modules, build en ~11 s).
-- Test de fumée : `uvicorn app.main:app` + `curl /api/health` → `200 OK`.
-- Import des classes ML sur Python 3.14 → **succès** (~60 s).
+- `npm run build` → **succès** (40 modules, build en ~13 s).
+- `npm run preview` + `curl` → **HTTP 200**, `<title>` correct.
+- Aucun test unitaire frontend (framework de test non installé — prévu Phase 7).
 
 ### Fonctionnalités réellement validées
-- Endpoint `/api/health` (réel, réponse 200 vérifiée).
-- Compatibilité des dépendances ML avec Python 3.14 (imports réels).
-- Build et démarrage du frontend Vite/React.
-- **Aucun** modèle de traduction ou TTS exécuté (non téléchargé).
+- Compilation et rendu de l'interface (build + serve).
+- Navigation du parcours en données simulées (vérifiée visuellement via le build).
+- **Aucun** appel réel aux modèles ou au backend (interface en mode démonstration).
 
 ### Problèmes rencontrés
-- Import `torch` très lent sur cette machine : **~40 s** (pression mémoire / swap).
-  Impact : les modèles devront être chargés une fois puis réutilisés, jamais
-  rechargés à chaque requête.
-- `FutureWarning` : `torch.jit.script` non supporté en Python 3.14+ (sans impact
-  attendu sur l'inférence seq2seq/VITS, à surveiller).
-- `StarletteDeprecationWarning` : `httpx`/`TestClient` déprécié au profit de
-  `httpx2` (avertissement sans effet sur les tests).
-- `npm` signale `esbuild` dont le script postinstall n'est pas approuvé ; le
-  build fonctionne néanmoins.
+- Aucun bloquant. L'interface n'est pas encore câblée au backend (Phases 3-6).
 
 ### Limites restantes
-- Besoins mémoire et latence des modèles **estimés**, non mesurés.
+- Interface en **données simulées** : extraction, analyse, traduction et audio
+  ne sont pas encore réels.
+- Pas de test unitaire frontend (à ajouter en Phase 7).
+- Besoins mémoire/latence des modèles estimés, non mesurés.
 - Licences non commerciales : exploitation commerciale bloquée sans autorisation.
-- Modèles non encore téléchargés (≈ 2,3 Go + ≈ 150 Mo).
 
 ### Prochaine étape
-Phase 2 — Interface : réaliser les écrans du parcours (accueil, importation,
-prévisualisation, correction, consentement, résultats, traduction éwé, lecteur
-audio) en mobile-first, avec états de chargement/erreur et accessibilité.
-Critère de validation : navigation complète du parcours en local, sans appels
-réels aux modèles (données simulées).
+Phase 3 — Documents : implémenter côté backend l'importation, l'extraction
+(PDF texte, DOCX, OCR images), la prévisualisation et le nettoyage des fichiers
+temporaires, puis câbler l'importation réelle au frontend.
+Critère de validation : extraire réellement le texte d'un PDF/DOCX/image local.
 
 ### Instructions pour reprendre
 - Backend : `cd backend && source .venv/bin/activate && uvicorn app.main:app --reload`
