@@ -24,3 +24,12 @@ export function extractDocument(files) {
   files.forEach(({ file }) => form.append('files', file, file.name))
   return request('/documents/extract', { method: 'POST', body: form })
 }
+
+// Demande l'explication du texte (avec consentement explicite).
+export function explainDocument(text, consent) {
+  return request('/explanations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, consent }),
+  })
+}

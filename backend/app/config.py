@@ -22,7 +22,7 @@ def _int(name: str, default: int) -> int:
 @dataclass(frozen=True)
 class Settings:
     gemini_api_key: str = field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
-    gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-1.5-flash"))
+    gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.5-flash"))
     max_upload_size_mb: int = field(default_factory=lambda: _int("MAX_UPLOAD_SIZE_MB", 20))
     max_document_pages: int = field(default_factory=lambda: _int("MAX_DOCUMENT_PAGES", 20))
     model_cache_dir: str = field(default_factory=lambda: os.getenv("MODEL_CACHE_DIR", ""))

@@ -1,11 +1,11 @@
 # JuriLex — Avancement du développement
 
 ## État général
-- Phase actuelle : Phase 3 — Documents (validée) · prochaine : Phase 4 — Explication IA
+- Phase actuelle : Phase 4 — Explication IA (validée) · prochaine : Phase 5 — Traduction
 - Dernière mise à jour : 2026-10-31
 - État global : EN COURS
 - Blocage principal : licences non commerciales (CC-BY-NC(-SA)) à trancher pour
-  toute exploitation commerciale ; modèles non encore exécutés localement.
+  toute exploitation commerciale ; modèles de traduction/TTS non encore exécutés.
 
 ## Phase 0 — Faisabilité
 - [x] Vérification des licences (traduction CC-BY-NC-SA-4.0, TTS CC-BY-NC-4.0, base CC-BY-NC-4.0)
@@ -48,12 +48,12 @@
 - [x] Nettoyage des fichiers temporaires (session `TEMP_DIR`, noms aléatoires, supprimés après traitement)
 
 ## Phase 4 — Explication IA
-- [ ] Configuration Gemini
-- [ ] Endpoint d'explication
-- [ ] Validation du consentement
-- [ ] Gestion des erreurs
-- [ ] Protection contre les injections de prompt
-- [ ] Test réel Gemini
+- [x] Configuration Gemini (SDK `google-genai`, clé serveur, modèle `gemini-3.5-flash`)
+- [x] Endpoint d'explication (`POST /api/explanations`)
+- [x] Validation du consentement (vérifiée côté backend → 403 sans consentement)
+- [x] Gestion des erreurs (503 sans clé/indisponible, 400 vide/trop long, timeout)
+- [x] Protection contre les injections de prompt (instructions système)
+- [x] Test réel Gemini (explication réelle vérifiée, sources document/ia/incertain)
 
 ## Phase 5 — Traduction
 - [ ] Licence vérifiée
@@ -94,64 +94,59 @@
 ## Dernière session de travail
 
 ### Travail effectué
-- Implémentation de l'extraction de texte côté backend (Phase 3) :
-  - `POST /api/documents/extract` (multipart, plusieurs fichiers).
-  - PDF avec texte (pypdf), PDF numérisé/mixte (rendu pdftoppm + OCR Tesseract).
-  - DOCX (python-docx, paragraphes + tableaux).
-  - Images (OCR Tesseract, langue française).
-  - Détection du type **réel** (magic bytes), indépendamment de l'extension.
-  - Validation : taille max, nombre de pages max, fichiers vides/malformés.
-  - Fichiers temporaires en session (`TEMP_DIR/<session_id>/`), noms aléatoires,
-    supprimés après traitement.
-- Câblage du frontend : l'étape « Extraire le texte » appelle désormais le
-  backend réel (au lieu des données simulées).
+- Intégration de Gemini côté backend (Phase 4) :
+  - SDK `google-genai` (nouvelle API « Interactions »), clé lue depuis `.env`.
+  - Mise à jour du modèle : `gemini-1.5-flash` (obsolète, 404) → `gemini-3.5-flash`.
+  - Endpoint `POST /api/explanations` : vérification du consentement **côté
+    backend** (403 sans consentement), validation du texte, appel réel à Gemini.
+  - Réponse structurée (nature, résumé, obligations, montants, dates, conditions,
+    conséquences, ambiguïtés, questions) avec source `document`/`ia`/`incertain`.
+  - Protection contre les injections de prompt (instructions système).
+  - Gestion des erreurs : 503 sans clé/indisponible, 400 vide/trop long.
+- Câblage du frontend : l'analyse appelle désormais le backend réel.
 
 ### Fichiers modifiés
-- `backend/app/extraction.py` — détection de type + extraction PDF/DOCX/OCR (créé).
-- `backend/app/storage.py` — gestion des fichiers temporaires (créé).
-- `backend/app/routers/documents.py` — endpoint d'extraction (créé).
-- `backend/app/schemas.py` — modèle de réponse `ExtractionResponse` (créé).
-- `backend/app/main.py` — inclusion du routeur documents.
-- `backend/requirements.txt` — ajout pypdf, python-docx, pillow, pytesseract.
-- `backend/tests/test_extraction.py`, `test_documents.py` — tests (créés).
-- `frontend/src/api.js` — client HTTP (créé).
-- `frontend/src/App.jsx` — extraction câblée au backend réel.
-- `README.md`, `AVANCEMENT.md` — documentation mise à jour.
+- `backend/app/ai.py` — client Gemini + prompt système + normalisation (créé).
+- `backend/app/routers/explanations.py` — endpoint d'explication (créé).
+- `backend/app/schemas.py` — modèles `ExplanationRequest/Item/Response`.
+- `backend/app/config.py`, `.env`, `.env.example` — modèle par défaut mis à jour.
+- `backend/requirements.txt` — ajout `google-genai`.
+- `backend/tests/test_explanations.py` — tests consentement/erreurs/mock (créé).
+- `frontend/src/api.js`, `frontend/src/App.jsx` — analyse câblée au backend.
+- `AVANCEMENT.md` — suivi mis à jour.
 
 ### Tests exécutés
-- `python -m pytest -q` → **12 passed** (dont OCR réel sur image générée).
-- `npm run build` → **succès** (41 modules).
-- Test de bout en bout : `POST /api/documents/extract` avec un vrai DOCX →
-  **200**, texte extrait correct, `extraction_method=docx_text`.
-- Vérification du nettoyage : `TEMP_DIR` vide après extraction.
+- `python -m pytest -q` → **17 passed**.
+- **Test réel Gemini** : `ai.explain()` sur un contrat d'exemple → explication
+  structurée correcte (obligations, montants, conséquences, ambiguïtés, questions,
+  sources bien distinguées).
+- **Test HTTP réel** : `POST /api/explanations` → **403** sans consentement,
+  **200** avec consentement (explication réelle de Gemini).
 
 ### Fonctionnalités réellement validées
-- Extraction DOCX (réelle, vérifiée via test et curl).
-- OCR d'image (réel, Tesseract `fra`, test passé).
-- Détection de type (réelle, magic bytes).
-- Rejet des formats non pris en charge (415), fichiers vides (400), trop volumineux (413).
-- Nettoyage des fichiers temporaires (réel, vérifié).
-- Extraction PDF de texte : partiellement testée (détection + page sans texte) ;
-  un PDF texte réel reste à vérifier manuellement.
+- Explication produite par Gemini (réelle, clé valide, modèle `gemini-3.5-flash`).
+- Vérification du consentement côté backend (réelle, 403).
+- Refus sans clé API (503) et texte vide (400).
+- Distinction des sources document/ia/incertain (réelle).
 
 ### Problèmes rencontrés
-- Aucun bloquant. Le rendu OCR des PDF scannés (pdftoppm) n'est pas encore
-  couvert par un test automatisé (nécessite une fixture PDF numérisée).
+- `gemini-1.5-flash` et `gemini-2.5-*` ne sont plus disponibles (404) ; les
+  modèles 3.x exigent la nouvelle API « Interactions ». Résolu en passant à
+  `google-genai` (interactions) avec `gemini-3.5-flash`.
 
 ### Limites restantes
-- Analyse (Gemini), traduction (NLLB) et audio (MMS TTS) encore simulés.
-- Modèles non téléchargés (~2,3 Go + ~150 Mo).
+- Traduction (NLLB) et audio (MMS TTS) encore simulés.
+- Modèles de traduction/TTS non téléchargés (~2,3 Go + ~150 Mo).
 - Licences non commerciales : exploitation commerciale bloquée sans autorisation.
 
 ### Prochaine étape
-Phase 4 — Explication IA : intégrer Gemini côté backend (clé serveur), imposer
-le consentement côté backend, structurer la réponse, gérer les erreurs et
-protéger contre les injections de prompt.
-Critère de validation : sans `GEMINI_API_KEY`, l'endpoint refuse l'appel ; avec
-une clé valide, l'explication est réellement produite par Gemini.
+Phase 5 — Traduction locale : installer/charger le modèle NLLB-éwé (base +
+adaptateur LoRA), implémenter l'endpoint de traduction français→éwé, tester
+réellement et mesurer mémoire/latence. Cette phase nécessite le téléchargement
+des poids (~2,3 Go) — voir accord explicite requis.
 
 ### Instructions pour reprendre
 - Backend : `cd backend && source .venv/bin/activate && uvicorn app.main:app --reload`
 - Frontend : `cd frontend && npm run dev`
 - Tests : `cd backend && .venv/bin/python -m pytest`
-- Ne pas télécharger les modèles (~2,3 Go + ~150 Mo) sans accord explicite (Règle 4).
+- Ne pas télécharger les modèles de traduction/TTS (~2,3 Go + ~150 Mo) sans accord explicite (Règle 4).

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { simulateAnalysis, simulateTranslation, simulateSpeech } from './mock.js'
-import { extractDocument } from './api.js'
+import { simulateTranslation, simulateSpeech } from './mock.js'
+import { extractDocument, explainDocument } from './api.js'
 import StepIndicator from './components/StepIndicator.jsx'
 import Home from './screens/Home.jsx'
 import Import from './screens/Import.jsx'
@@ -101,10 +101,15 @@ export default function App() {
   const onAccept = async () => {
     setState((s) => ({ ...s, consent: true, busy: true, error: null, step: 'analyzing' }))
     try {
-      const explanation = await simulateAnalysis()
+      const explanation = await explainDocument(state.correctedText, true)
       setState((s) => ({ ...s, busy: false, explanation, step: 'results' }))
-    } catch {
-      setState((s) => ({ ...s, busy: false, error: "L'analyse a échoué. Veuillez réessayer." }))
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        busy: false,
+        error: e.message || "L'analyse a échoué. Veuillez réessayer.",
+        step: 'analyzing',
+      }))
     }
   }
 
