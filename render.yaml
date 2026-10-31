@@ -9,7 +9,7 @@
 
 services:
   - type: web
-    name: jurilex-backend
+    name: jurilex-api
     runtime: python
     region: oregon
     plan: standard
@@ -24,7 +24,7 @@ services:
       - key: MODEL_CACHE_DIR
         value: /var/data/models
       - key: ALLOWED_ORIGINS
-        value: https://jurilex-frontend.onrender.com
+        value: https://jurilex.onrender.com
       - key: MAX_UPLOAD_SIZE_MB
         value: "20"
       - key: MAX_DOCUMENT_PAGES
@@ -37,9 +37,9 @@ services:
       sizeGB: 10
 
 staticSites:
-  - name: jurilex-frontend
+  - name: jurilex
     buildCommand: cd frontend && npm install && npm run build
     publishDir: frontend/dist
     envVars:
       - key: VITE_API_URL
-        value: https://jurilex-backend.onrender.com/api
+        value: https://jurilex-api.onrender.com/api

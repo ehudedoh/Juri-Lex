@@ -25,7 +25,7 @@ Le dépôt contient un fichier `render.yaml` prêt à l'emploi.
 
 1. Sur Render : **New → Blueprint**.
 2. Connecter le dépôt GitHub `ehudedoh/Juri-Lex`.
-3. Render détecte `render.yaml` et crée le service `jurilex-backend`.
+3. Render détecte `render.yaml` et crée le service `jurilex-api`.
 4. Renseigner la variable `GEMINI_API_KEY` (demandée comme secret, `sync: false`).
 5. Ajuster `ALLOWED_ORIGINS` à l'URL réelle du frontend.
 6. Vérifier le plan/la RAM du service (≥ 4 Go).
@@ -75,7 +75,7 @@ curl https://<service>.onrender.com/api/health
 
 ## 6. Déploiement du frontend (PWA)
 
-Le blueprint `render.yaml` inclut un **static site** (`jurilex-frontend`) qui
+Le blueprint `render.yaml` inclut un **static site** (`jurilex`) qui
 construit l'application Vite/React et publie `frontend/dist`.
 
 ### 6.1. URL de l'API (`VITE_API_URL`)
@@ -84,7 +84,7 @@ Le frontend lit l'URL du backend via la variable `VITE_API_URL` (définie **au
 build**). Exemple :
 
 ```
-VITE_API_URL=https://jurilex-backend.onrender.com/api
+VITE_API_URL=https://jurilex-api.onrender.com/api
 ```
 
 Sans cette variable, le frontend utilise `/api` (proxy Vite, développement
@@ -94,7 +94,7 @@ uniquement).
 
 Le backend doit autoriser l'origine du frontend. Vérifier que `ALLOWED_ORIGINS`
 sur le service backend contient bien l'URL du frontend (ex.
-`https://jurilex-frontend.onrender.com`).
+`https://jurilex.onrender.com`).
 
 ### 6.3. Service worker / PWA
 
