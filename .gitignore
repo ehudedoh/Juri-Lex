@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Environnement / secrets (jamais versionnés)
+.env
+.env.*
+!.env.example
+
+# Fichiers temporaires et logs
+tmp/
+*.log
+
+# Poids des modèles (jamais versionnés sans décision explicite)
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.onnx
+model_cache/

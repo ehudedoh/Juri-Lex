@@ -1,0 +1,9 @@
+# Dépendances des modèles de traduction et de synthèse vocale (Phase 5/6).
+#
+# IMPORTANT — torch doit être installé en version CPU sur cette machine
+# (aucun GPU CUDA disponible) :
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#
+transformers<5.0.0
+accelerate
+peft
