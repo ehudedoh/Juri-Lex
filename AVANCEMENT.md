@@ -1,7 +1,7 @@
 # JuriLex — Avancement du développement
 
 ## État général
-- Phase actuelle : Phase 2 — Interface (validée) · prochaine : Phase 3 — Documents
+- Phase actuelle : Phase 3 — Documents (validée) · prochaine : Phase 4 — Explication IA
 - Dernière mise à jour : 2026-10-31
 - État global : EN COURS
 - Blocage principal : licences non commerciales (CC-BY-NC(-SA)) à trancher pour
@@ -41,11 +41,11 @@
 > aux Phases 3 à 6.
 
 ## Phase 3 — Documents
-- [ ] Extraction PDF
-- [ ] Extraction DOCX
-- [ ] OCR des images
-- [ ] Gestion des erreurs
-- [ ] Nettoyage des fichiers temporaires
+- [x] Extraction PDF (texte direct via pypdf ; pages sans texte → OCR)
+- [x] Extraction DOCX (python-docx, paragraphes + tableaux)
+- [x] OCR des images (Tesseract `fra`, vérifié réellement)
+- [x] Gestion des erreurs (taille, format réel, pages, fichiers vides/malformés)
+- [x] Nettoyage des fichiers temporaires (session `TEMP_DIR`, noms aléatoires, supprimés après traitement)
 
 ## Phase 4 — Explication IA
 - [ ] Configuration Gemini
@@ -94,52 +94,61 @@
 ## Dernière session de travail
 
 ### Travail effectué
-- Réalisation de l'interface mobile-first du parcours complet (Phase 2) :
-  9 écrans (accueil, importation, prévisualisation, correction du texte,
-  consentement, analyse en cours, résultats, éwé & audio, fin de session).
-- Direction artistique conforme au cahier des charges : vert profond, fond
-  ivoire, texte anthracite, ocre doux, rouge réservé aux erreurs ; typographie
-  sans sérif, cartes sobres, sans dégradés ni illustrations génériques.
-- États de chargement (spinners, sans faux pourcentage) et d'erreur (alertes +
-  bouton réessayer) implémentés.
-- Accessibilité : HTML sémantique, `focus-visible`, `prefers-reduced-motion`,
-  labels ARIA, navigation clavier (boutons natifs).
-- Données simulées (`src/mock.js`) pour tester le parcours, sans appel backend.
+- Implémentation de l'extraction de texte côté backend (Phase 3) :
+  - `POST /api/documents/extract` (multipart, plusieurs fichiers).
+  - PDF avec texte (pypdf), PDF numérisé/mixte (rendu pdftoppm + OCR Tesseract).
+  - DOCX (python-docx, paragraphes + tableaux).
+  - Images (OCR Tesseract, langue française).
+  - Détection du type **réel** (magic bytes), indépendamment de l'extension.
+  - Validation : taille max, nombre de pages max, fichiers vides/malformés.
+  - Fichiers temporaires en session (`TEMP_DIR/<session_id>/`), noms aléatoires,
+    supprimés après traitement.
+- Câblage du frontend : l'étape « Extraire le texte » appelle désormais le
+  backend réel (au lieu des données simulées).
 
 ### Fichiers modifiés
-- `frontend/src/App.jsx` — machine à états du parcours + orchestration simulée.
-- `frontend/src/steps.js` — définition des 9 étapes.
-- `frontend/src/mock.js` — données et fonctions simulées (aucune donnée réelle).
-- `frontend/src/index.css` — design system complet (couleurs, boutons, cartes…).
-- `frontend/src/components/Button.jsx`, `StepIndicator.jsx` — composants réutilisables.
-- `frontend/src/screens/*.jsx` — 9 écrans du parcours.
-- `AVANCEMENT.md` — suivi mis à jour.
+- `backend/app/extraction.py` — détection de type + extraction PDF/DOCX/OCR (créé).
+- `backend/app/storage.py` — gestion des fichiers temporaires (créé).
+- `backend/app/routers/documents.py` — endpoint d'extraction (créé).
+- `backend/app/schemas.py` — modèle de réponse `ExtractionResponse` (créé).
+- `backend/app/main.py` — inclusion du routeur documents.
+- `backend/requirements.txt` — ajout pypdf, python-docx, pillow, pytesseract.
+- `backend/tests/test_extraction.py`, `test_documents.py` — tests (créés).
+- `frontend/src/api.js` — client HTTP (créé).
+- `frontend/src/App.jsx` — extraction câblée au backend réel.
+- `README.md`, `AVANCEMENT.md` — documentation mise à jour.
 
 ### Tests exécutés
-- `npm run build` → **succès** (40 modules, build en ~13 s).
-- `npm run preview` + `curl` → **HTTP 200**, `<title>` correct.
-- Aucun test unitaire frontend (framework de test non installé — prévu Phase 7).
+- `python -m pytest -q` → **12 passed** (dont OCR réel sur image générée).
+- `npm run build` → **succès** (41 modules).
+- Test de bout en bout : `POST /api/documents/extract` avec un vrai DOCX →
+  **200**, texte extrait correct, `extraction_method=docx_text`.
+- Vérification du nettoyage : `TEMP_DIR` vide après extraction.
 
 ### Fonctionnalités réellement validées
-- Compilation et rendu de l'interface (build + serve).
-- Navigation du parcours en données simulées (vérifiée visuellement via le build).
-- **Aucun** appel réel aux modèles ou au backend (interface en mode démonstration).
+- Extraction DOCX (réelle, vérifiée via test et curl).
+- OCR d'image (réel, Tesseract `fra`, test passé).
+- Détection de type (réelle, magic bytes).
+- Rejet des formats non pris en charge (415), fichiers vides (400), trop volumineux (413).
+- Nettoyage des fichiers temporaires (réel, vérifié).
+- Extraction PDF de texte : partiellement testée (détection + page sans texte) ;
+  un PDF texte réel reste à vérifier manuellement.
 
 ### Problèmes rencontrés
-- Aucun bloquant. L'interface n'est pas encore câblée au backend (Phases 3-6).
+- Aucun bloquant. Le rendu OCR des PDF scannés (pdftoppm) n'est pas encore
+  couvert par un test automatisé (nécessite une fixture PDF numérisée).
 
 ### Limites restantes
-- Interface en **données simulées** : extraction, analyse, traduction et audio
-  ne sont pas encore réels.
-- Pas de test unitaire frontend (à ajouter en Phase 7).
-- Besoins mémoire/latence des modèles estimés, non mesurés.
+- Analyse (Gemini), traduction (NLLB) et audio (MMS TTS) encore simulés.
+- Modèles non téléchargés (~2,3 Go + ~150 Mo).
 - Licences non commerciales : exploitation commerciale bloquée sans autorisation.
 
 ### Prochaine étape
-Phase 3 — Documents : implémenter côté backend l'importation, l'extraction
-(PDF texte, DOCX, OCR images), la prévisualisation et le nettoyage des fichiers
-temporaires, puis câbler l'importation réelle au frontend.
-Critère de validation : extraire réellement le texte d'un PDF/DOCX/image local.
+Phase 4 — Explication IA : intégrer Gemini côté backend (clé serveur), imposer
+le consentement côté backend, structurer la réponse, gérer les erreurs et
+protéger contre les injections de prompt.
+Critère de validation : sans `GEMINI_API_KEY`, l'endpoint refuse l'appel ; avec
+une clé valide, l'explication est réellement produite par Gemini.
 
 ### Instructions pour reprendre
 - Backend : `cd backend && source .venv/bin/activate && uvicorn app.main:app --reload`

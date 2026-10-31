@@ -23,6 +23,15 @@ français simple, traduction en éwé et synthèse vocale éwé.
 - Python ≥ 3.11 (testé sur 3.14)
 - Node.js ≥ 18 et npm
 - Git
+- **Tesseract OCR** (binaire `tesseract` + langue `fra`) — pour l'OCR des images
+  et PDF numérisés
+- **Poppler** (`pdftoppm`) — pour le rendu des pages de PDF scannés
+
+Sur Debian/Ubuntu :
+
+```bash
+sudo apt-get install tesseract-ocr tesseract-ocr-fra poppler-utils
+```
 
 ## Installation
 

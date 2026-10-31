@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { simulateExtraction, simulateAnalysis, simulateTranslation, simulateSpeech } from './mock.js'
+import { simulateAnalysis, simulateTranslation, simulateSpeech } from './mock.js'
+import { extractDocument } from './api.js'
 import StepIndicator from './components/StepIndicator.jsx'
 import Home from './screens/Home.jsx'
 import Import from './screens/Import.jsx'
@@ -73,17 +74,17 @@ export default function App() {
   const onExtract = async () => {
     patch({ busy: true, error: null })
     try {
-      const text = await simulateExtraction()
+      const result = await extractDocument(state.files)
       setState((s) => ({
         ...s,
         busy: false,
-        extractedText: text,
-        correctedText: text,
+        extractedText: result.text,
+        correctedText: result.text,
         textVersion: 1,
         step: 'verify',
       }))
-    } catch {
-      patch({ busy: false, error: "L'extraction du texte a échoué. Veuillez réessayer." })
+    } catch (e) {
+      patch({ busy: false, error: e.message || "L'extraction du texte a échoué. Veuillez réessayer." })
     }
   }
 
