@@ -1,9 +1,15 @@
 import Button from '../components/Button.jsx'
 
-export default function Ewe({ french, translation, audioUrl, busy, onTranslate, onSpeak, onBack, onFinish }) {
+export default function Ewe({ french, translation, audioUrl, busy, error, onTranslate, onSpeak, onBack, onFinish }) {
   return (
     <div className="screen">
       <h1>Éwé & audio</h1>
+
+      {error && (
+        <div className="alert alert--error">
+          <p>{error}</p>
+        </div>
+      )}
 
       <section className="lang-block">
         <h2>Français</h2>

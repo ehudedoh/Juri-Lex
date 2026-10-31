@@ -28,3 +28,13 @@ def test_translation_unavailable(monkeypatch):
     monkeypatch.setattr("app.translation.translate_fr_to_ewe", boom)
     resp = client.post("/api/translations", json={"text": "bonjour"})
     assert resp.status_code == 503
+
+
+def test_translation_loading(monkeypatch):
+    from app import translation
+
+    monkeypatch.setattr(translation, "_state", "idle")
+    monkeypatch.setattr(translation, "start_loading", lambda: None)
+    resp = client.post("/api/translations", json={"text": "bonjour"})
+    assert resp.status_code == 503
+    assert "chargement" in resp.json()["detail"].lower()

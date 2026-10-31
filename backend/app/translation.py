@@ -1,10 +1,14 @@
 """Traduction français → éwé via NLLB adapté (LoRA).
 
-Le modèle est chargé une seule fois et réutilisé (chargement coûteux en temps
-et en mémoire). Aucun poids n'est exposé au frontend ; le modèle est exécuté
-exclusivement côté backend.
+Le modèle est chargé **une seule fois** puis réutilisé. Le chargement est coûteux
+(plusieurs minutes sur CPU) : il est déclenché **en arrière-plan au démarrage**
+via `start_loading()`, afin de ne jamais bloquer une requête HTTP (ce qui
+dépasserait le délai d'attente des hébergeurs comme Render et provoquerait un
+502). Tant que le modèle n'est pas prêt, la traduction lève
+`TranslationLoadingError` (réponse 503 rapide).
 """
 
+import gc
 import logging
 import threading
 
@@ -19,10 +23,16 @@ MAX_TOKENS = 128
 _lock = threading.Lock()
 _infer_lock = threading.Lock()
 _translator = None
+_state = "idle"  # idle | loading | loaded | failed
+_error = None
 
 
 class TranslationUnavailableError(Exception):
-    """La traduction n'est pas disponible (modèle absent, non chargé, etc.)."""
+    """La traduction n'est pas disponible (modèle absent, échec, etc.)."""
+
+
+class TranslationLoadingError(Exception):
+    """Le modèle est en cours de chargement ; réessayer plus tard."""
 
 
 class _Translator:
@@ -47,22 +57,43 @@ class _Translator:
         return self.tokenizer.batch_decode(gen, skip_special_tokens=True)[0]
 
 
-def _get_translator() -> _Translator:
-    global _translator
+def _load() -> None:
+    global _translator, _state, _error
+    try:
+        translator = _Translator()
+        with _lock:
+            _translator = translator
+            _state = "loaded"
+            _error = None
+    except Exception as exc:
+        logger.error("Échec du chargement du modèle de traduction : %s", type(exc).__name__)
+        with _lock:
+            _state = "failed"
+            _error = type(exc).__name__
+
+
+def start_loading() -> None:
+    """Démarre le chargement du modèle en arrière-plan (non bloquant)."""
+    global _state
     with _lock:
-        if _translator is None:
-            _translator = _Translator()
-        return _translator
+        if _state in ("loading", "loaded"):
+            return
+        _state = "loading"
+    threading.Thread(target=_load, daemon=True).start()
+
+
+def status() -> str:
+    """État du modèle : idle, loading, loaded ou failed."""
+    return _state
 
 
 def unload() -> None:
     """Libère le modèle de traduction de la mémoire (chargement coûteux)."""
-    global _translator
+    global _translator, _state
     with _lock:
         if _translator is not None:
             _translator = None
-            import gc
-
+            _state = "idle"
             gc.collect()
 
 
@@ -70,11 +101,22 @@ def translate_fr_to_ewe(text: str) -> str:
     """Traduit un texte français en éwé (appel réel au modèle NLLB)."""
     if not text or not text.strip():
         raise TranslationUnavailableError("Le texte à traduire est vide.")
+
+    if _state != "loaded":
+        start_loading()
+        raise TranslationLoadingError(
+            "Le modèle de traduction est en cours de chargement. "
+            "Réessayez dans quelques instants."
+        )
+
     try:
         # Sérialise l'inférence : le modèle n'est pas conçu pour des appels concurrents.
         with _infer_lock:
-            return _get_translator().translate(text)
-    except TranslationUnavailableError:
+            translator = _translator
+            if translator is None:
+                raise TranslationLoadingError("Le modèle de traduction est en cours de chargement.")
+            return translator.translate(text)
+    except (TranslationUnavailableError, TranslationLoadingError):
         raise
     except Exception as exc:
         logger.error("Échec de la traduction : %s", type(exc).__name__)

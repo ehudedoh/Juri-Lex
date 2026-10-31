@@ -202,6 +202,7 @@ export default function App() {
             translation={state.translation}
             audioUrl={state.audioUrl}
             busy={state.busy}
+            error={state.error}
             onTranslate={translate}
             onSpeak={speak}
             onBack={() => patch({ step: 'results', error: null })}
