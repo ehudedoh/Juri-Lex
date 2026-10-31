@@ -1,7 +1,9 @@
 // Client HTTP vers le backend JuriLex.
-// En développement, le proxy Vite redirige `/api` vers http://localhost:8000.
+// - En développement, le proxy Vite redirige `/api` vers http://localhost:8000.
+// - En production, définir VITE_API_URL (ex. https://backend.onrender.com/api)
+//   lors du build pour pointer vers le backend déployé.
 
-const API_BASE = '/api'
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 async function request(path, options) {
   const res = await fetch(`${API_BASE}${path}`, options)

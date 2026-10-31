@@ -103,9 +103,15 @@ ambiguïtés. La qualité finale doit être relue par des locuteurs éwé.
 
 ## Déploiement
 
-Le déploiement du backend sur Render est documenté dans
-`docs/DEPLOIEMENT.md` (blueprint `render.yaml`, disque persistant pour les
-modèles, préchargement des poids via `backend/download_models.py`).
+Le déploiement (backend + frontend) sur Render est documenté dans
+`docs/DEPLOIEMENT.md` :
+
+- **Backend** : service web FastAPI, disque persistant pour les modèles,
+  préchargement des poids via `backend/download_models.py`.
+- **Frontend** : static site Vite/React (PWA). L'URL de l'API se configure au
+  build via `VITE_API_URL` (ex. `https://backend.onrender.com/api`).
+
+Le fichier `render.yaml` (blueprint Render) définit les deux services.
 
 > ⚠️ Les modèles NLLB et MMS TTS sont sous licence **non commerciale** ; une
 > exploitation commerciale nécessite une autorisation des ayants droit.

@@ -1,10 +1,11 @@
-# JuriLex — Blueprint de déploiement Render (backend)
+# JuriLex — Blueprint de déploiement Render (backend + frontend)
 #
 # ATTENTION :
 # - Sélectionner un plan avec au moins 4 Go de RAM (idéalement 8 Go) : le modèle
 #   de traduction NLLB occupe ~2,4 Go en mémoire. Le plan « standard » peut être
 #   insuffisant ; ajuster dans le tableau de bord Render si nécessaire.
 # - Le disque persistant (/var/data) sert au cache des modèles (~2,5 Go).
+# - Adapter les URLs (ALLOWED_ORIGINS et VITE_API_URL) aux domaines réels.
 
 services:
   - type: web
@@ -34,3 +35,11 @@ services:
       name: models
       mountPath: /var/data
       sizeGB: 10
+
+staticSites:
+  - name: jurilex-frontend
+    buildCommand: cd frontend && npm install && npm run build
+    publishDir: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://jurilex-backend.onrender.com/api
