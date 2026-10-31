@@ -1,11 +1,11 @@
 # JuriLex — Avancement du développement
 
 ## État général
-- Phase actuelle : Phase 6 — Synthèse vocale (validée) · prochaine : Phase 7 — Sécurité et qualité
+- Phase actuelle : Phase 7 — Sécurité et validation (en cours) · prochaine : Phase 8 — Déploiement
 - Dernière mise à jour : 2026-10-31
 - État global : EN COURS
 - Blocage principal : licences non commerciales (CC-BY-NC(-SA)) à trancher pour
-  toute exploitation commerciale ; déploiement et tests finaux à réaliser.
+  toute exploitation commerciale ; tests utilisateurs et déploiement à réaliser.
 
 ## Phase 0 — Faisabilité
 - [x] Vérification des licences (traduction CC-BY-NC-SA-4.0, TTS CC-BY-NC-4.0, base CC-BY-NC-4.0)
@@ -74,13 +74,13 @@
 - [x] Mesures de mémoire et de latence (546 Mo, pic 617 Mo ; ~68 s chargement inclus)
 
 ## Phase 7 — Sécurité et validation
-- [ ] Tests backend
-- [ ] Tests frontend
-- [ ] Tests de confidentialité
-- [ ] Tests de nettoyage
-- [ ] Tests de sécurité
-- [ ] Tests linguistiques
-- [ ] Tests utilisateurs
+- [x] Tests backend (29 tests, dont sécurité/confidentialité/nettoyage)
+- [x] Tests frontend (Vitest + Testing Library, 2 tests)
+- [x] Tests de confidentialité (aucune base de données persistante — test dédié)
+- [x] Tests de nettoyage (répertoire temporaire + fichiers orphelins)
+- [x] Tests de sécurité (anti-injection de prompt, chemins sûrs, limites taille/format)
+- [x] Tests linguistiques (corpus 36 phrases + script d'évaluation ; relecture éwé à faire)
+- [ ] Tests utilisateurs (protocole rédigé dans `docs/TESTS_UTILISATEURS.md` — à réaliser)
 
 ## Phase 8 — Déploiement
 - [ ] Hébergement choisi
@@ -94,60 +94,62 @@
 ## Dernière session de travail
 
 ### Travail effectué
-- Intégration de la synthèse vocale éwé (Phase 6) :
-  - Module `speech.py` : chargement MMS TTS (VITS) à la demande, génération d'un
-    WAV 16 kHz en mémoire (aucun fichier temporaire sur disque).
-  - Endpoint `POST /api/speech` : libère le traducteur (~2,4 Go) avant de charger
-    le TTS (~0,5 Go) pour respecter les limites mémoire (Règle 4), retourne le WAV
-    avec `Cache-Control: no-store`.
-  - Endpoints lourds (explication, traduction, audio) passés en `def` (thread
-    pool) pour ne pas bloquer la boucle d'événements FastAPI.
-  - Frontend : génération audio réelle + lecture via balise `<audio>`, révocation
-    des URL objet.
-- Mesures réelles TTS : mémoire ~546 Mo (pic ~617 Mo), génération ~68 s
-  (chargement inclus).
+- Phase 7 — Sécurité et validation :
+  - Nettoyage des fichiers orphelins (`storage.cleanup_orphans`, §6.1).
+  - Tests de sécurité : anti-injection de prompt (instructions système + document
+    délimité), chemins sûrs (noms aléatoires), limites taille/format (déjà couverts).
+  - Tests de confidentialité : absence de base de données persistante (test dédié).
+  - Tests de nettoyage : répertoire temporaire vidé après extraction + orphelins.
+  - Tests frontend : Vitest + Testing Library (2 tests de navigation).
+  - PWA : `manifest.webmanifest`, service worker (cache statique uniquement,
+    jamais `/api/*`), icônes générées, enregistrement en production.
+  - Corpus linguistique : 36 phrases (`corpus_fr_ewe.py`) + script
+    `eval_translation.py`.
+  - Plan de tests utilisateurs (`docs/TESTS_UTILISATEURS.md`).
 
 ### Fichiers modifiés
-- `backend/app/speech.py` — synthèse vocale MMS TTS (créé).
-- `backend/app/translation.py` — ajout `unload()`.
-- `backend/app/routers/speech.py` — endpoint audio (créé).
-- `backend/app/routers/{explanations,translations}.py` — passage en `def`.
-- `backend/app/schemas.py` — modèle `SpeechRequest`.
-- `backend/app/main.py` — inclusion du routeur speech.
-- `backend/tests/test_speech.py` — tests (créé, avec mocks).
-- `frontend/src/api.js` — `speakToEwe` (blob audio).
-- `frontend/src/App.jsx`, `screens/Ewe.jsx` — lecture audio réelle.
-- `AVANCEMENT.md` — suivi mis à jour.
+- `backend/app/storage.py` — ajout `cleanup_orphans`.
+- `backend/tests/test_security.py` — tests sécurité/confidentialité/nettoyage (créé).
+- `backend/corpus_fr_ewe.py`, `backend/eval_translation.py` — corpus + évaluation (créés).
+- `docs/TESTS_UTILISATEURS.md` — protocole de tests utilisateurs (créé).
+- `frontend/public/` — manifest, service worker, icônes (créés).
+- `frontend/index.html`, `src/main.jsx` — PWA (manifest + enregistrement SW).
+- `frontend/vitest.config.js`, `src/test-setup.js`, `src/App.test.jsx` — tests frontend (créés).
+- `frontend/package.json`, `package-lock.json` — dépendances de test.
+- `README.md`, `AVANCEMENT.md` — documentation mise à jour.
 
 ### Tests exécutés
-- `python -m pytest -q` → **23 passed**.
-- `npm run build` → **succès** (40 modules).
-- **Test réel TTS** : génération d'un WAV valide (1 canal, 16 kHz, ~4,6 s).
-- **Test HTTP réel** : `POST /api/speech` → **200**, `audio/wav`, 142 Ko, WAV valide.
+- `python -m pytest -q` → **29 passed** (dont sécurité/confidentialité/nettoyage).
+- `npm test` → **2 passed** (Vitest).
+- `npm run build` → **succès** (40 modules, PWA incluse).
+- Évaluation linguistique : script validé ; l'exécution du corpus d'exemple a été
+  interrompue (redémarrage du serveur) — à relancer.
 
 ### Fonctionnalités réellement validées
-- Génération audio éwé réelle (MMS TTS).
-- Serveur HTTP : WAV servi avec le bon type MIME, lisible par un navigateur.
-- Stratégie mémoire : déchargement du traducteur avant chargement du TTS.
+- Nettoyage des fichiers temporaires et orphelins (réel, testé).
+- Anti-injection de prompt (structure du prompt vérifiée).
+- PWA installable (manifest + service worker, cache statique uniquement).
+- Tests frontend (réels).
 
 ### Problèmes rencontrés
-- Aucun bloquant. L'avertissement `torch.jit.script` non supporté en Python 3.14
-  persiste (sans impact sur l'inférence VITS/NLLB).
+- L'évaluation du corpus a été interrompue par un redémarrage du serveur ; à
+  relancer (`python eval_translation.py`).
 
 ### Limites restantes
-- Le parcours complet (extraction → analyse → traduction → audio) n'a pas encore
-  été testé de bout en bout dans un navigateur réel.
-- Tests de sécurité/confidentialité et tests utilisateurs à réaliser (Phase 7).
+- Tests utilisateurs non réalisés (protocole prêt, nécessite de vrais testeurs).
+- Relecture des traductions éwé par des locuteurs compétents à faire.
+- Parcours complet non testé de bout en bout dans un navigateur réel.
 - Licences non commerciales : exploitation commerciale bloquée sans autorisation.
 
 ### Prochaine étape
-Phase 7 — Sécurité et validation : tests backend/frontend, confidentialité,
-nettoyage, sécurité (injections de prompt, limites), tests linguistiques, et
-vérification du parcours complet. En complément, mettre en place le PWA
-(manifest + service worker sans mise en cache des données sensibles).
+Phase 8 — Déploiement : choisir l'hébergement (à partir des mesures), configurer
+les secrets, déployer frontend + backend, tester en production et documenter les
+coûts et limites.
 
 ### Instructions pour reprendre
 - Backend : `cd backend && source .venv/bin/activate && uvicorn app.main:app --reload`
 - Frontend : `cd frontend && npm run dev`
-- Tests : `cd backend && .venv/bin/python -m pytest`
+- Tests backend : `cd backend && .venv/bin/python -m pytest`
+- Tests frontend : `cd frontend && npm test`
+- Évaluation linguistique : `cd backend && .venv/bin/python eval_translation.py`
 - Les modèles NLLB et MMS TTS sont déjà en cache local (~/.cache/huggingface).

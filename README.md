@@ -85,10 +85,34 @@ configuré vers le backend).
 ## Tests
 
 ```bash
+# Backend
 cd backend
 source .venv/bin/activate
 python -m pytest
+
+# Frontend
+cd frontend
+npm test
 ```
+
+### Évaluation linguistique (traduction)
+
+```bash
+cd backend
+source .venv/bin/activate
+python eval_translation.py --limit 5   # ou sans limite pour le corpus complet
+```
+
+Le corpus de 36 phrases (`corpus_fr_ewe.py`) couvre obligations, interdictions,
+montants, dates, délais, conditions, exceptions, pénalités, résiliation et
+ambiguïtés. La qualité finale doit être relue par des locuteurs éwé.
+
+## PWA
+
+Le frontend est une PWA : `manifest.webmanifest` + service worker
+(`public/sw.js`). Le service worker met en cache **uniquement les ressources
+statiques** ; il ne met jamais en cache les documents, textes, explications,
+traductions ni fichiers audio (les requêtes `/api/*` sont ignorées).
 
 ## Avertissement
 
