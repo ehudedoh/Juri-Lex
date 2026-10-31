@@ -18,6 +18,21 @@ async function request(path, options) {
   return res.json()
 }
 
+async function requestBlob(path, options) {
+  const res = await fetch(`${API_BASE}${path}`, options)
+  if (!res.ok) {
+    let message = 'Une erreur est survenue.'
+    try {
+      const data = await res.json()
+      if (data && data.detail) message = data.detail
+    } catch {
+      // réponse non JSON : conserver le message par défaut
+    }
+    throw new Error(message)
+  }
+  return res.blob()
+}
+
 // Envoie les fichiers sélectionnés pour extraction du texte.
 export function extractDocument(files) {
   const form = new FormData()
@@ -37,6 +52,15 @@ export function explainDocument(text, consent) {
 // Traduit un texte français en éwé.
 export function translateToEwe(text) {
   return request('/translations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+}
+
+// Génère l'audio éwé (renvoie un Blob audio/wav).
+export function speakToEwe(text) {
+  return requestBlob('/speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),

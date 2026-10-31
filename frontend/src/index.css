@@ -562,6 +562,10 @@ a {
   font-weight: 600;
 }
 
+.player__audio {
+  width: 100%;
+}
+
 /* ---- Accueil ---- */
 
 .how ol,

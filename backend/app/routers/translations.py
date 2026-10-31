@@ -13,7 +13,7 @@ MAX_TEXT_CHARS = 5000
 
 
 @router.post("", response_model=TranslationResponse)
-async def create_translation(req: TranslationRequest) -> TranslationResponse:
+def create_translation(req: TranslationRequest) -> TranslationResponse:
     text = (req.text or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="Le texte à traduire est vide.")

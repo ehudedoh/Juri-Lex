@@ -20,6 +20,10 @@ class TranslationResponse(BaseModel):
     request_id: str
 
 
+class SpeechRequest(BaseModel):
+    text: str
+
+
 class ExplanationRequest(BaseModel):
     text: str
     consent: bool = False

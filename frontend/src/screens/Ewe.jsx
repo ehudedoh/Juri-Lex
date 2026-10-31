@@ -1,6 +1,6 @@
 import Button from '../components/Button.jsx'
 
-export default function Ewe({ french, translation, audio, busy, onTranslate, onSpeak, onBack, onFinish }) {
+export default function Ewe({ french, translation, audioUrl, busy, onTranslate, onSpeak, onBack, onFinish }) {
   return (
     <div className="screen">
       <h1>Éwé & audio</h1>
@@ -29,20 +29,12 @@ export default function Ewe({ french, translation, audio, busy, onTranslate, onS
 
       <section className="lang-block">
         <h2>Écouter en éwé</h2>
-        {audio ? (
+        {audioUrl ? (
           <div className="player" role="group" aria-label="Lecteur audio">
-            <span className="player__label">
-              {audio.label} · {audio.durationSec} s
-            </span>
-            <div className="player__controls">
-              <Button disabled aria-label="Lecture indisponible en démonstration">
-                ▶ Écouter
-              </Button>
-            </div>
-            <p className="notice">
-              La lecture audio sera disponible après intégration du modèle MMS TTS
-              (démonstration).
-            </p>
+            <audio controls src={audioUrl} className="player__audio">
+              Votre navigateur ne permet pas la lecture audio.
+            </audio>
+            <p className="notice">Voix générée par un modèle de synthèse vocale éwé.</p>
           </div>
         ) : (
           <Button onClick={onSpeak} disabled={busy || !translation}>

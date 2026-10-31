@@ -55,6 +55,17 @@ def _get_translator() -> _Translator:
         return _translator
 
 
+def unload() -> None:
+    """Libère le modèle de traduction de la mémoire (chargement coûteux)."""
+    global _translator
+    with _lock:
+        if _translator is not None:
+            _translator = None
+            import gc
+
+            gc.collect()
+
+
 def translate_fr_to_ewe(text: str) -> str:
     """Traduit un texte français en éwé (appel réel au modèle NLLB)."""
     if not text or not text.strip():

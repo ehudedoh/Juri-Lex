@@ -1,11 +1,11 @@
 # JuriLex — Avancement du développement
 
 ## État général
-- Phase actuelle : Phase 5 — Traduction (validée) · prochaine : Phase 6 — Synthèse vocale
+- Phase actuelle : Phase 6 — Synthèse vocale (validée) · prochaine : Phase 7 — Sécurité et qualité
 - Dernière mise à jour : 2026-10-31
 - État global : EN COURS
 - Blocage principal : licences non commerciales (CC-BY-NC(-SA)) à trancher pour
-  toute exploitation commerciale ; modèle TTS non encore exécuté.
+  toute exploitation commerciale ; déploiement et tests finaux à réaliser.
 
 ## Phase 0 — Faisabilité
 - [x] Vérification des licences (traduction CC-BY-NC-SA-4.0, TTS CC-BY-NC-4.0, base CC-BY-NC-4.0)
@@ -65,13 +65,13 @@
 - [x] Mesures de mémoire et de latence (pic ~2,5 Go ; 9–46 s/phrase ; chargement ~6 min)
 
 ## Phase 6 — Synthèse vocale
-- [ ] Licence vérifiée
-- [ ] MMS TTS installé
-- [ ] Chargement réel du modèle
-- [ ] Génération réelle d'un fichier audio
-- [ ] Lecture audio dans le navigateur
-- [ ] Nettoyage audio
-- [ ] Mesures de mémoire et de latence
+- [x] Licence vérifiée (CC-BY-NC-4.0, non commerciale)
+- [x] MMS TTS installé (modèle déjà en cache local)
+- [x] Chargement réel du modèle (VITS 36,3 M params)
+- [x] Génération réelle d'un fichier audio (WAV 16 kHz valide, ~4,5 s)
+- [x] Lecture audio dans le navigateur (endpoint `audio/wav` + balise `<audio>`)
+- [x] Nettoyage audio (génération en mémoire, `unload` TTS, `Cache-Control: no-store`, révocation des URL objet)
+- [x] Mesures de mémoire et de latence (546 Mo, pic 617 Mo ; ~68 s chargement inclus)
 
 ## Phase 7 — Sécurité et validation
 - [ ] Tests backend
@@ -94,53 +94,57 @@
 ## Dernière session de travail
 
 ### Travail effectué
-- Intégration de la traduction locale français → éwé (Phase 5) :
-  - Module `translation.py` : chargement **une seule fois** (singleton) du modèle
-    de base NLLB-600M + adaptateur LoRA éwé, avec verrou d'inférence.
-  - Endpoint `POST /api/translations`.
-  - Câblage du frontend (le bouton « Traduire en éwé » appelle le backend réel).
-- Mesures réelles : mémoire ~2,4 Go (pic ~2,5 Go), latence 9–46 s/phrase,
-  chargement initial ~6 min (une seule fois par processus).
+- Intégration de la synthèse vocale éwé (Phase 6) :
+  - Module `speech.py` : chargement MMS TTS (VITS) à la demande, génération d'un
+    WAV 16 kHz en mémoire (aucun fichier temporaire sur disque).
+  - Endpoint `POST /api/speech` : libère le traducteur (~2,4 Go) avant de charger
+    le TTS (~0,5 Go) pour respecter les limites mémoire (Règle 4), retourne le WAV
+    avec `Cache-Control: no-store`.
+  - Endpoints lourds (explication, traduction, audio) passés en `def` (thread
+    pool) pour ne pas bloquer la boucle d'événements FastAPI.
+  - Frontend : génération audio réelle + lecture via balise `<audio>`, révocation
+    des URL objet.
+- Mesures réelles TTS : mémoire ~546 Mo (pic ~617 Mo), génération ~68 s
+  (chargement inclus).
 
 ### Fichiers modifiés
-- `backend/app/translation.py` — traduction NLLB-éwé (créé).
-- `backend/app/routers/translations.py` — endpoint de traduction (créé).
-- `backend/app/schemas.py` — modèles `TranslationRequest/Response`.
-- `backend/app/main.py` — inclusion du routeur translations.
-- `backend/tests/test_translations.py` — tests (créé, avec mocks).
-- `frontend/src/api.js`, `frontend/src/App.jsx` — traduction câblée au backend.
+- `backend/app/speech.py` — synthèse vocale MMS TTS (créé).
+- `backend/app/translation.py` — ajout `unload()`.
+- `backend/app/routers/speech.py` — endpoint audio (créé).
+- `backend/app/routers/{explanations,translations}.py` — passage en `def`.
+- `backend/app/schemas.py` — modèle `SpeechRequest`.
+- `backend/app/main.py` — inclusion du routeur speech.
+- `backend/tests/test_speech.py` — tests (créé, avec mocks).
+- `frontend/src/api.js` — `speakToEwe` (blob audio).
+- `frontend/src/App.jsx`, `screens/Ewe.jsx` — lecture audio réelle.
 - `AVANCEMENT.md` — suivi mis à jour.
 
 ### Tests exécutés
-- `python -m pytest -q` → **20 passed** (tests traductions avec mocks).
-- `npm run build` → **succès** (41 modules).
-- **Test réel de traduction** (script) : 4 phrases traduites réellement en éwé —
-  obligation, montant (« cent mille » → « akpe alafa ɖeka »), durée (« douze » →
-  « wuieve »), interdiction (« interdit » → négation « … o »). Nombres et
-  négations conservés.
+- `python -m pytest -q` → **23 passed**.
+- `npm run build` → **succès** (40 modules).
+- **Test réel TTS** : génération d'un WAV valide (1 canal, 16 kHz, ~4,6 s).
+- **Test HTTP réel** : `POST /api/speech` → **200**, `audio/wav`, 142 Ko, WAV valide.
 
 ### Fonctionnalités réellement validées
-- Chargement réel du modèle NLLB-éwé (base + LoRA).
-- Traduction réelle français → éwé (vérifiée sur plusieurs types de phrases).
-- Conservation des nombres et des négations (vérifiée réellement).
+- Génération audio éwé réelle (MMS TTS).
+- Serveur HTTP : WAV servi avec le bon type MIME, lisible par un navigateur.
+- Stratégie mémoire : déchargement du traducteur avant chargement du TTS.
 
 ### Problèmes rencontrés
-- Le tokenizer de l'adaptateur LoRA a un `tokenizer_config.json` incompatible
-  avec transformers 4.57 (`AttributeError`). Résolu en utilisant le tokenizer
-  standard du modèle de base NLLB.
-- Latence CPU élevée (9–46 s/phrase) : acceptable pour le MVP, à optimiser
-  ultérieurement (quantification, segmentation).
+- Aucun bloquant. L'avertissement `torch.jit.script` non supporté en Python 3.14
+  persiste (sans impact sur l'inférence VITS/NLLB).
 
 ### Limites restantes
-- Traduction limitée au résumé de l'explication (pas au document complet).
-- Audio (MMS TTS) encore simulé.
+- Le parcours complet (extraction → analyse → traduction → audio) n'a pas encore
+  été testé de bout en bout dans un navigateur réel.
+- Tests de sécurité/confidentialité et tests utilisateurs à réaliser (Phase 7).
 - Licences non commerciales : exploitation commerciale bloquée sans autorisation.
 
 ### Prochaine étape
-Phase 6 — Synthèse vocale locale : charger MMS TTS éwé (déjà en cache, ~145 Mo),
-implémenter l'endpoint de génération audio, produire un vrai fichier WAV, le
-servir au frontend et le lire dans le navigateur. Attention : coexistence mémoire
-NLLB (~2,4 Go) + TTS (~0,5 Go) à valider.
+Phase 7 — Sécurité et validation : tests backend/frontend, confidentialité,
+nettoyage, sécurité (injections de prompt, limites), tests linguistiques, et
+vérification du parcours complet. En complément, mettre en place le PWA
+(manifest + service worker sans mise en cache des données sensibles).
 
 ### Instructions pour reprendre
 - Backend : `cd backend && source .venv/bin/activate && uvicorn app.main:app --reload`

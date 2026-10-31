@@ -13,7 +13,7 @@ MAX_TEXT_CHARS = 20000
 
 
 @router.post("", response_model=ExplanationResponse)
-async def create_explanation(req: ExplanationRequest) -> ExplanationResponse:
+def create_explanation(req: ExplanationRequest) -> ExplanationResponse:
     # Le consentement est vérifié côté backend, pas seulement dans l'interface.
     if not req.consent:
         raise HTTPException(status_code=403, detail="Consentement requis avant l'analyse.")

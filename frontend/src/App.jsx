@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { simulateSpeech } from './mock.js'
-import { extractDocument, explainDocument, translateToEwe } from './api.js'
+import { extractDocument, explainDocument, translateToEwe, speakToEwe } from './api.js'
 import StepIndicator from './components/StepIndicator.jsx'
 import Home from './screens/Home.jsx'
 import Import from './screens/Import.jsx'
@@ -23,7 +22,7 @@ const INITIAL_STATE = {
   consent: false,
   explanation: null,
   translation: null,
-  audio: null,
+  audioUrl: null,
   busy: false,
   error: null,
 }
@@ -36,7 +35,7 @@ const resetResults = () => ({
   consent: false,
   explanation: null,
   translation: null,
-  audio: null,
+  audioUrl: null,
 })
 
 export default function App() {
@@ -44,7 +43,10 @@ export default function App() {
 
   const patch = (p) => setState((s) => ({ ...s, ...p }))
 
-  const restart = () => setState(INITIAL_STATE)
+  const restart = () => {
+    if (state.audioUrl) URL.revokeObjectURL(state.audioUrl)
+    setState(INITIAL_STATE)
+  }
 
   const addFiles = (files) => {
     const items = files.map((file) => ({ id: `f${++idCounter}`, file }))
@@ -95,7 +97,7 @@ export default function App() {
       textVersion: s.textVersion + 1,
       explanation: null,
       translation: null,
-      audio: null,
+      audioUrl: null,
     }))
 
   const onAccept = async () => {
@@ -124,12 +126,15 @@ export default function App() {
   }
 
   const speak = async () => {
+    const prevUrl = state.audioUrl
     patch({ busy: true, error: null })
     try {
-      const audio = await simulateSpeech()
-      setState((s) => ({ ...s, busy: false, audio }))
-    } catch {
-      patch({ busy: false, error: "La génération audio a échoué. Veuillez réessayer." })
+      const blob = await speakToEwe(state.translation)
+      if (prevUrl) URL.revokeObjectURL(prevUrl)
+      const audioUrl = URL.createObjectURL(blob)
+      setState((s) => ({ ...s, busy: false, audioUrl }))
+    } catch (e) {
+      patch({ busy: false, error: e.message || 'La génération audio a échoué. Veuillez réessayer.' })
     }
   }
 
@@ -195,7 +200,7 @@ export default function App() {
           <Ewe
             french={state.explanation?.summary || ''}
             translation={state.translation}
-            audio={state.audio}
+            audioUrl={state.audioUrl}
             busy={state.busy}
             onTranslate={translate}
             onSpeak={speak}
