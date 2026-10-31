@@ -1,0 +1,36 @@
+# JuriLex — Blueprint de déploiement Render (backend)
+#
+# ATTENTION :
+# - Sélectionner un plan avec au moins 4 Go de RAM (idéalement 8 Go) : le modèle
+#   de traduction NLLB occupe ~2,4 Go en mémoire. Le plan « standard » peut être
+#   insuffisant ; ajuster dans le tableau de bord Render si nécessaire.
+# - Le disque persistant (/var/data) sert au cache des modèles (~2,5 Go).
+
+services:
+  - type: web
+    name: jurilex-backend
+    runtime: python
+    region: oregon
+    plan: standard
+    buildCommand: cd backend && pip install --upgrade pip && pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: MODEL_CACHE_DIR
+        value: /var/data/models
+      - key: ALLOWED_ORIGINS
+        value: https://jurilex-frontend.onrender.com
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "20"
+      - key: MAX_DOCUMENT_PAGES
+        value: "20"
+      - key: REQUEST_TIMEOUT_SECONDS
+        value: "300"
+    disk:
+      name: models
+      mountPath: /var/data
+      sizeGB: 10

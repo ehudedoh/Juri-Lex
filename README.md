@@ -42,14 +42,8 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
-```
-
-Dépendances des modèles (Phase 5/6), installées séparément :
-
-```bash
-# torch en version CPU uniquement (cette machine n'a pas de GPU CUDA)
+# torch en version CPU uniquement (pas de GPU CUDA sur cette machine)
 pip install torch --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements-ml.txt
 ```
 
 ### Configuration
@@ -106,6 +100,15 @@ python eval_translation.py --limit 5   # ou sans limite pour le corpus complet
 Le corpus de 36 phrases (`corpus_fr_ewe.py`) couvre obligations, interdictions,
 montants, dates, délais, conditions, exceptions, pénalités, résiliation et
 ambiguïtés. La qualité finale doit être relue par des locuteurs éwé.
+
+## Déploiement
+
+Le déploiement du backend sur Render est documenté dans
+`docs/DEPLOIEMENT.md` (blueprint `render.yaml`, disque persistant pour les
+modèles, préchargement des poids via `backend/download_models.py`).
+
+> ⚠️ Les modèles NLLB et MMS TTS sont sous licence **non commerciale** ; une
+> exploitation commerciale nécessite une autorisation des ayants droit.
 
 ## PWA
 

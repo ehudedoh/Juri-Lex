@@ -32,3 +32,9 @@ class Settings:
 
 
 settings = Settings()
+
+# Dirige le cache Hugging Face (poids NLLB/MMS TTS) vers MODEL_CACHE_DIR si défini.
+# Doit être exécuté avant l'import de `transformers`/`peft` dans les modules.
+if settings.model_cache_dir:
+    os.environ["HF_HUB_CACHE"] = settings.model_cache_dir
+    os.environ["TRANSFORMERS_CACHE"] = settings.model_cache_dir

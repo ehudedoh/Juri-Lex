@@ -7,3 +7,9 @@ python-docx
 pillow
 pytesseract
 google-genai
+huggingface-hub
+transformers<5.0.0
+accelerate
+peft
+sentencepiece
+protobuf
